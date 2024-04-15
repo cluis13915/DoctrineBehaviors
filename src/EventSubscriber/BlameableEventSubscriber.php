@@ -32,6 +32,7 @@ final class BlameableEventSubscriber implements EventSubscriberInterface
     private const CREATED_BY = 'createdBy';
 
     public function __construct(
+        \Doctrine\Persistence\ManagerRegistry $registry,
         private UserProviderInterface $userProvider,
         private EntityManagerInterface $entityManager,
         private ?string $blameableUserEntity = null
@@ -148,9 +149,18 @@ final class BlameableEventSubscriber implements EventSubscriberInterface
         }
     }
 
-    private function getUnitOfWork(): UnitOfWork
+    private function getUnitOfWork($entity): UnitOfWork
     {
-        return $this->entityManager->getUnitOfWork();
+        $entityManager = $this->registry->getManagerForClass(get_class($entity));
+
+        if (null === $entityManager) {
+            throw new \LogicException(sprintf(
+                'No entity manager found for class \'%s\'.',
+                get_class($entity)
+            ));
+        }
+
+        return $entityManager->getUnitOfWork();
     }
 
     private function mapManyToOneUser(ClassMetadataInfo $classMetadataInfo): void
